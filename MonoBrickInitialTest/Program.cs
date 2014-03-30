@@ -94,10 +94,6 @@ namespace MotorExample
 						motor.Off ();
 					}
 				}
-
-				// else display "on"
-
-//				System.Threading.Thread.Sleep (1000);
 			}
 		}
 	}
