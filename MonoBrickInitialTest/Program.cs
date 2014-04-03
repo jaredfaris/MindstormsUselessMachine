@@ -6,11 +6,14 @@ using MonoBrickFirmware.UserInput;
 using MonoBrickFirmware.Sensors;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Net;
 
 namespace MotorExample
 {
 	class MainClass
 	{
+		private static bool PreviouslySwitched = false;
+
 		public static void Main (string[] args)
 		{
 			ManualResetEvent terminateProgram = new ManualResetEvent(false);
@@ -46,6 +49,7 @@ namespace MotorExample
 
 			// we'll be using the tachometer to track rotations so lets reset it
 			motor.ResetTacho ();
+			System.Threading.Thread.Sleep (100);
 
 			while (motor.GetSpeed() > 0) {
 				// just keeps us from moving on until the arm is fully reset
@@ -62,6 +66,7 @@ namespace MotorExample
 		private static void MainLoop(Motor motor) {
 			var touchSensor = new TouchSensor(SensorPort.In1);
 
+
 			while (true) {
 
 				// there are a few states that the switch and the arm can be in
@@ -76,10 +81,11 @@ namespace MotorExample
 				if (switchStatus) {
 					// if the motor hasn't moved backwards to push the switch off, we'll do that
 					if (motor.GetTachoCount () > -120) {
-						LcdConsole.WriteLine ("(On) Extending arm");
-						motor.On (-10);
+//						LcdConsole.WriteLine ("(On) Extending arm");
+						motor.On (-20);
+						System.Threading.Thread.Sleep (50);
 					} else { // if it's moved all the way back, stop pushing it
-						LcdConsole.WriteLine ("(On) Arm fully extended");
+//						LcdConsole.WriteLine ("(On) Arm fully extended");
 						motor.Off ();
 					}
 
@@ -87,13 +93,26 @@ namespace MotorExample
 				} else { // When it's off, we're happy
 					// if the arm isn't fully retracted, it's time to put it back to zero
 					if (motor.GetTachoCount () < -20) {
-						LcdConsole.WriteLine ("(Off) Reset the arm");
-						motor.On (10);
+//						LcdConsole.WriteLine ("(Off) Reset the arm");
+						motor.On (20);
+						System.Threading.Thread.Sleep (200);
 					} else { // if it is, we're done
-						LcdConsole.WriteLine ("(Off) Arm fully reset");
+//						LcdConsole.WriteLine ("(Off) Arm fully reset");
 						motor.Off ();
 					}
 				}
+
+				if (switchStatus != PreviouslySwitched && !PreviouslySwitched) {
+					Action<string> foo = delegate(string x) {
+						HttpWebRequest request = (HttpWebRequest)WebRequest.Create ("http://crappychatws.azurewebsites.net/api/lego");
+						request.Proxy = null;
+						request.GetResponse ();
+						LcdConsole.WriteLine(x);
+					};
+					foo.BeginInvoke ("Someone flipped my switch >_<", null, null);
+				}
+
+				PreviouslySwitched = switchStatus;
 			}
 		}
 	}
